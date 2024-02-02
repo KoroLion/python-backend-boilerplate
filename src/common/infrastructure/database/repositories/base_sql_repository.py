@@ -9,8 +9,8 @@ T = TypeVar("T")
 def transactional(f: Any) -> Any:
     async def _decorator(self: BaseSQLRepository, *args: Any, **kwargs: Any) -> Any:
         session = self.create_session()
-        kwargs["session"] = session
         try:
+            self.session = session
             result = await f(self, *args, **kwargs)
             await session.commit()
         except Exception as err:
@@ -24,9 +24,11 @@ def transactional(f: Any) -> Any:
 
 
 class BaseSQLRepository:
+    session: AsyncSession
+
     def __init__(self, async_engine: AsyncEngine) -> None:
         self._async_engine = async_engine
-        self._async_sessionmaker = async_sessionmaker(bind=self._async_engine, expire_on_commit=False)
+        self._async_sessionmaker = async_sessionmaker(bind=self._async_engine, expire_on_commit=True)
 
     def create_session(self) -> AsyncSession:
         return self._async_sessionmaker()
